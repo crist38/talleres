@@ -1,5 +1,6 @@
 // ============================================================
 // src/pages/OrderList.jsx
+// Visualización de órdenes en modo Detalle (tarjetas) o Lista (filas)
 // ============================================================
 import { useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -22,6 +23,12 @@ export default function OrderList() {
   const [orders, setOrders] = useState([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('all')
+  const [viewMode, setViewMode] = useState(() => localStorage.getItem('order_view_mode') || 'grid')
+
+  const handleSetViewMode = (mode) => {
+    setViewMode(mode)
+    localStorage.setItem('order_view_mode', mode)
+  }
 
   const load = useCallback(() => {
     if (!selectedWorkcenter) { navigate('/workcenter'); return }
@@ -60,18 +67,41 @@ export default function OrderList() {
           </button>
         </div>
 
-        {/* Filtros */}
-        <div className="flex gap-8" style={{ flexWrap: 'wrap' }}>
-          {FILTERS.map(f => (
+        {/* Barra de Filtros y Modo de Vista */}
+        <div className="flex justify-between items-center" style={{ flexWrap: 'wrap', gap: 12 }}>
+          {/* Filtros de estado */}
+          <div className="flex gap-8" style={{ flexWrap: 'wrap' }}>
+            {FILTERS.map(f => (
+              <button
+                key={f.key}
+                id={`filter-${f.key}`}
+                className={`btn btn-sm ${filter === f.key ? 'btn-primary' : 'btn-ghost'}`}
+                onClick={() => setFilter(f.key)}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Selector de modo de vista (Detalle / Lista) */}
+          <div className="flex gap-8" style={{ background: 'var(--bg-base)', padding: 4, borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
             <button
-              key={f.key}
-              id={`filter-${f.key}`}
-              className={`btn btn-sm ${filter === f.key ? 'btn-primary' : 'btn-ghost'}`}
-              onClick={() => setFilter(f.key)}
+              id="view-mode-grid"
+              className={`btn btn-sm ${viewMode === 'grid' ? 'btn-primary' : 'btn-ghost'}`}
+              onClick={() => handleSetViewMode('grid')}
+              style={{ minHeight: 36, padding: '0 16px' }}
             >
-              {f.label}
+              🎴 Modo Detalle
             </button>
-          ))}
+            <button
+              id="view-mode-list"
+              className={`btn btn-sm ${viewMode === 'list' ? 'btn-primary' : 'btn-ghost'}`}
+              onClick={() => handleSetViewMode('list')}
+              style={{ minHeight: 36, padding: '0 16px' }}
+            >
+              📑 Modo Lista
+            </button>
+          </div>
         </div>
 
         {loading ? (
@@ -87,10 +117,16 @@ export default function OrderList() {
               No hay órdenes de trabajo {filter !== 'all' ? 'con este estado ' : ''}para este centro.
             </div>
           </div>
+        ) : viewMode === 'list' ? (
+          <div className="order-list-rows">
+            {filtered.map(order => (
+              <OrderCard key={order.id} order={order} viewMode="list" />
+            ))}
+          </div>
         ) : (
           <div className="grid-2">
             {filtered.map(order => (
-              <OrderCard key={order.id} order={order} />
+              <OrderCard key={order.id} order={order} viewMode="grid" />
             ))}
           </div>
         )}
