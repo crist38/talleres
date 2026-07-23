@@ -10,7 +10,15 @@ export default function Topbar({ crumbs = [] }) {
 
   return (
     <div className="topbar">
-      <Link to="/operator" className="topbar-logo">⚙️ Talleres Prowindows</Link>
+      <Link to="/operator" className="topbar-logo" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <img
+          src="/logo.png"
+          alt="Logo"
+          style={{ height: 32, width: 'auto', objectFit: 'contain' }}
+          onError={(e) => { e.target.style.display = 'none' }}
+        />
+        <span>Talleres Prowindows</span>
+      </Link>
 
       <div className="topbar-breadcrumb">
         {selectedOperator && (

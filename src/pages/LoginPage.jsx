@@ -29,7 +29,12 @@ export default function LoginPage() {
     <div className="login-page">
       <div className="login-card">
         <div className="login-logo">
-          <div className="login-logo-icon">⚙️</div>
+          <img
+            src="/logo-texto.png"
+            alt="Prowindows Logo"
+            style={{ maxHeight: 64, maxWidth: '100%', objectFit: 'contain', marginBottom: 12 }}
+            onError={(e) => { e.target.style.display = 'none' }}
+          />
           <h1>Talleres Prowindows</h1>
           <p>Interfaz de Fabricación · Odoo 19</p>
         </div>
