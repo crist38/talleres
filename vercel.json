@@ -1,0 +1,12 @@
+{
+  "rewrites": [
+    {
+      "source": "/web/:path*",
+      "destination": "https://prowindows-ltda.odoo.com/web/:path*"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
