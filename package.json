@@ -1,0 +1,24 @@
+{
+  "name": "factoryfloor",
+  "version": "1.0.0",
+  "description": "Factory-first PWA interface for Odoo 19 Manufacturing operators",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host --port 5173 --strictPort",
+    "build": "vite build",
+    "preview": "vite preview",
+    "serve": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "http-proxy-middleware": "^3.0.3",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.26.2"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.1",
+    "vite": "^5.4.8",
+    "vite-plugin-pwa": "^0.20.5"
+  }
+}
