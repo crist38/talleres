@@ -116,3 +116,50 @@ export function getWorkorderCode(wo) {
 
   return origin || moCode || ''
 }
+
+/**
+ * Filtra los centros de trabajo según los permisos asignados a cada operario:
+ * - Daniel Pacheco: solo talleres de Termopaneles
+ * - William Rivera Cuevas (Williams): solo Corte de Vidrio
+ * - Cristian Tabilo: todos los talleres de PVC
+ * - Carlos Contreras R. & Cristian Pereira: acceso a TODOS los talleres
+ */
+export function filterWorkcentersForOperator(workcenters = [], operator = null) {
+  if (!operator || !operator.name) return workcenters
+
+  const name = operator.name.toLowerCase()
+
+  // Carlos Contreras R. y Cristian Pereira -> Todos los talleres
+  if (name.includes('carlos') || name.includes('pereira')) {
+    return workcenters
+  }
+
+  // Daniel Pacheco -> Solo Termopaneles
+  if (name.includes('daniel') || name.includes('pacheco')) {
+    const filtered = workcenters.filter(wc => {
+      const wcName = (wc.name || '').toLowerCase()
+      return wcName.includes('termopanel') || wcName.includes('termo')
+    })
+    return filtered.length > 0 ? filtered : workcenters
+  }
+
+  // William Rivera Cuevas (Williams) -> Solo Corte de Vidrio
+  if (name.includes('william') || name.includes('williams') || name.includes('rivera')) {
+    const filtered = workcenters.filter(wc => {
+      const wcName = (wc.name || '').toLowerCase()
+      return wcName.includes('corte') || wcName.includes('vidrio')
+    })
+    return filtered.length > 0 ? filtered : workcenters
+  }
+
+  // Cristian Tabilo -> Todos los talleres de PVC
+  if (name.includes('tabilo')) {
+    const filtered = workcenters.filter(wc => {
+      const wcName = (wc.name || '').toLowerCase()
+      return wcName.includes('pvc')
+    })
+    return filtered.length > 0 ? filtered : workcenters
+  }
+
+  return workcenters
+}

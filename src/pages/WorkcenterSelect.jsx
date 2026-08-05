@@ -5,6 +5,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useApp } from '../context/AppContext'
 import { getWorkcenters } from '../api/odoo'
+import { filterWorkcentersForOperator } from '../utils/formatters'
 import Topbar from '../components/Topbar'
 import OfflineBanner from '../components/OfflineBanner'
 import OdooAdminModal from '../components/OdooAdminModal'
@@ -25,7 +26,7 @@ function getIcon(name = '') {
 }
 
 export default function WorkcenterSelect() {
-  const { selectWorkcenter, showToast } = useApp()
+  const { selectedOperator, selectWorkcenter, showToast } = useApp()
   const navigate = useNavigate()
   const [workcenters, setWorkcenters] = useState([])
   const [loading, setLoading] = useState(true)
@@ -57,6 +58,8 @@ export default function WorkcenterSelect() {
     navigate('/orders')
   }
 
+  const availableWorkcenters = filterWorkcentersForOperator(workcenters, selectedOperator)
+
   return (
     <>
       <OfflineBanner />
@@ -65,7 +68,9 @@ export default function WorkcenterSelect() {
         <div className="page-header">
           <div>
             <h1 className="page-title">Selecciona tu Centro de Trabajo</h1>
-            <p className="page-subtitle">Toca la estación donde estás operando hoy</p>
+            <p className="page-subtitle">
+              {selectedOperator ? `Operador: ${selectedOperator.name}` : 'Toca la estación donde estás operando hoy'}
+            </p>
           </div>
           <div className="flex gap-8">
             <button
@@ -91,23 +96,23 @@ export default function WorkcenterSelect() {
             <div className="spinner" />
             <span>Cargando centros de trabajo...</span>
           </div>
-        ) : workcenters.length === 0 ? (
+        ) : availableWorkcenters.length === 0 ? (
           <div className="empty-state">
             <div className="empty-state-icon">🏭</div>
-            <div className="empty-state-title">Sin centros configurados</div>
+            <div className="empty-state-title">Sin centros asignados</div>
             <div className="empty-state-desc">
-              No hay centros de trabajo activos en Odoo o la conexión requiere credenciales.
+              No hay estaciones de trabajo disponibles para {selectedOperator?.name || 'este operario'}.
             </div>
             <button
               className="btn btn-primary mt-16"
-              onClick={() => setShowAdminModal(true)}
+              onClick={loadWorkcenters}
             >
-              ⚙️ Configurar Conexión Odoo
+              🔄 Reintentar
             </button>
           </div>
         ) : (
           <div className="grid-4">
-            {workcenters.map(wc => (
+            {availableWorkcenters.map(wc => (
               <button
                 key={wc.id}
                 id={`workcenter-${wc.id}`}
