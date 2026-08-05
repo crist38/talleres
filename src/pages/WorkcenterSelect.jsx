@@ -1,12 +1,13 @@
 // ============================================================
 // src/pages/WorkcenterSelect.jsx
 // ============================================================
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useApp } from '../context/AppContext'
-import { getWorkcenters, ensureAuthenticated } from '../api/odoo'
+import { getWorkcenters } from '../api/odoo'
 import Topbar from '../components/Topbar'
 import OfflineBanner from '../components/OfflineBanner'
+import OdooAdminModal from '../components/OdooAdminModal'
 
 // Iconos por nombre de workcenter (heurística)
 function getIcon(name = '') {
@@ -28,22 +29,28 @@ export default function WorkcenterSelect() {
   const navigate = useNavigate()
   const [workcenters, setWorkcenters] = useState([])
   const [loading, setLoading] = useState(true)
+  const [showAdminModal, setShowAdminModal] = useState(false)
 
-  useEffect(() => {
+  const loadWorkcenters = useCallback(() => {
     setLoading(true)
     getWorkcenters()
-      .then(setWorkcenters)
-      .catch(async (err) => {
-        try {
-          await ensureAuthenticated()
-          const retry = await getWorkcenters()
-          setWorkcenters(retry)
-        } catch (retryErr) {
-          showToast(`Error cargando centros: ${retryErr.message}`, 'error')
+      .then(list => {
+        setWorkcenters(list || [])
+        setShowAdminModal(false)
+      })
+      .catch(err => {
+        if (err.message?.includes('Acceso denegado') || err.message?.includes('AccessDenied') || err.message?.includes('Session expired') || err.message?.includes('expiró')) {
+          setShowAdminModal(true)
+        } else {
+          showToast(`Error cargando centros: ${err.message}`, 'error')
         }
       })
       .finally(() => setLoading(false))
   }, [showToast])
+
+  useEffect(() => {
+    loadWorkcenters()
+  }, [loadWorkcenters])
 
   const handleSelect = (wc) => {
     selectWorkcenter(wc)
@@ -60,13 +67,23 @@ export default function WorkcenterSelect() {
             <h1 className="page-title">Selecciona tu Centro de Trabajo</h1>
             <p className="page-subtitle">Toca la estación donde estás operando hoy</p>
           </div>
-          <button
-            id="btn-refresh-workcenters"
-            className="btn btn-ghost btn-sm"
-            onClick={() => { setLoading(true); getWorkcenters().then(setWorkcenters).finally(() => setLoading(false)) }}
-          >
-            🔄 Actualizar
-          </button>
+          <div className="flex gap-8">
+            <button
+              className="btn btn-ghost btn-sm"
+              onClick={() => setShowAdminModal(true)}
+              title="Configurar conexión Odoo"
+            >
+              ⚙️ Conexión
+            </button>
+            <button
+              id="btn-refresh-workcenters"
+              className="btn btn-ghost btn-sm"
+              onClick={loadWorkcenters}
+              disabled={loading}
+            >
+              🔄 Actualizar
+            </button>
+          </div>
         </div>
 
         {loading ? (
@@ -79,8 +96,14 @@ export default function WorkcenterSelect() {
             <div className="empty-state-icon">🏭</div>
             <div className="empty-state-title">Sin centros configurados</div>
             <div className="empty-state-desc">
-              No hay centros de trabajo activos en Odoo. Pide a tu administrador que los configure.
+              No hay centros de trabajo activos en Odoo o la conexión requiere credenciales.
             </div>
+            <button
+              className="btn btn-primary mt-16"
+              onClick={() => setShowAdminModal(true)}
+            >
+              ⚙️ Configurar Conexión Odoo
+            </button>
           </div>
         ) : (
           <div className="grid-4">
@@ -100,6 +123,17 @@ export default function WorkcenterSelect() {
           </div>
         )}
       </div>
+
+      {/* Modal de Configuración de Conexión Odoo */}
+      {showAdminModal && (
+        <OdooAdminModal
+          onConnected={() => {
+            setShowAdminModal(false)
+            loadWorkcenters()
+          }}
+          onCancel={() => setShowAdminModal(false)}
+        />
+      )}
     </>
   )
 }
