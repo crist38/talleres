@@ -4,7 +4,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useApp } from '../context/AppContext'
-import { getWorkcenters } from '../api/odoo'
+import { getWorkcenters, ensureAuthenticated } from '../api/odoo'
 import Topbar from '../components/Topbar'
 import OfflineBanner from '../components/OfflineBanner'
 
@@ -30,11 +30,20 @@ export default function WorkcenterSelect() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    setLoading(true)
     getWorkcenters()
       .then(setWorkcenters)
-      .catch(err => showToast(`Error cargando centros: ${err.message}`, 'error'))
+      .catch(async (err) => {
+        try {
+          await ensureAuthenticated()
+          const retry = await getWorkcenters()
+          setWorkcenters(retry)
+        } catch (retryErr) {
+          showToast(`Error cargando centros: ${retryErr.message}`, 'error')
+        }
+      })
       .finally(() => setLoading(false))
-  }, [])
+  }, [showToast])
 
   const handleSelect = (wc) => {
     selectWorkcenter(wc)

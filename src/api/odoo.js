@@ -7,9 +7,10 @@
 const BASE_URL = '' // vacío = mismo origen (proxy maneja /web/*)
 
 let _uid = null
-let _db = import.meta.env.VITE_ODOO_DB || ''
-let _user = import.meta.env.VITE_ODOO_USER || ''
-let _password = import.meta.env.VITE_ODOO_PASSWORD || ''
+let _db = (typeof window !== 'undefined' && localStorage.getItem('odoo_db')) || import.meta.env.VITE_ODOO_DB || 'prowindows-ltda'
+let _user = (typeof window !== 'undefined' && localStorage.getItem('odoo_user')) || import.meta.env.VITE_ODOO_USER || 'api_operarios'
+let _password = (typeof window !== 'undefined' && localStorage.getItem('odoo_password')) || import.meta.env.VITE_ODOO_PASSWORD || ''
+let _isAuthenticating = false
 
 // ── Primitiva JSON-RPC ──────────────────────────────────────
 async function rpc(path, params) {
@@ -47,9 +48,17 @@ async function rpc(path, params) {
     const errMsg  = json.error.data?.message || json.error.message || ''
 
     // Sesión expirada → re-autenticar automáticamente
-    if (errName === 'odoo.exceptions.SessionExpiredException') {
-      await authenticate()
-      return rpc(path, params) // retry
+    if (errName === 'odoo.exceptions.SessionExpiredException' || errMsg.includes('Session expired') || errMsg.includes('expiró')) {
+      if (!_isAuthenticating) {
+        _isAuthenticating = true
+        try {
+          await authenticate()
+          _isAuthenticating = false
+          return rpc(path, params) // reintentar petición con nueva sesión
+        } catch (_) {
+          _isAuthenticating = false
+        }
+      }
     }
 
     // Errores comunes con mensajes claros en español
@@ -190,6 +199,7 @@ export async function callMethod(model, method, ids, kwargs = {}) {
 
 // Centros de trabajo activos
 export async function getWorkcenters() {
+  await ensureAuthenticated()
   return searchRead(
     'mrp.workcenter',
     [['active', '=', true]],
