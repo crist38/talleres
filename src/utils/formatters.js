@@ -143,11 +143,11 @@ export function filterWorkcentersForOperator(workcenters = [], operator = null) 
     return filtered.length > 0 ? filtered : workcenters
   }
 
-  // William Rivera Cuevas (Williams) -> Solo Corte de Vidrio
+  // William Rivera Cuevas (Williams) -> Exclusivamente Taller Corte Vidrio
   if (name.includes('william') || name.includes('williams') || name.includes('rivera')) {
     const filtered = workcenters.filter(wc => {
       const wcName = (wc.name || '').toLowerCase()
-      return wcName.includes('corte') || wcName.includes('vidrio')
+      return wcName.includes('corte vidrio') || wcName.includes('corte de vidrio') || (wcName.includes('corte') && wcName.includes('vidrio'))
     })
     return filtered.length > 0 ? filtered : workcenters
   }
