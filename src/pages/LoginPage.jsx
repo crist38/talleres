@@ -72,18 +72,20 @@ export default function LoginPage() {
     setPinError(false)
   }
 
-  const verifyPin = (emp, enteredPin) => {
-    // Si el empleado tiene un PIN configurado en Odoo (campo 'pin')
-    const expectedPin = emp.pin ? String(emp.pin).trim() : null
+  const DEFAULT_PIN = '2115'
 
-    if (expectedPin && expectedPin !== enteredPin) {
+  const verifyPin = (emp, enteredPin) => {
+    // PIN 2115 asignado para todos los usuarios
+    const expectedPin = emp.pin ? String(emp.pin).trim() : DEFAULT_PIN
+
+    if (enteredPin !== expectedPin && enteredPin !== DEFAULT_PIN) {
       setPinError(true)
       showToast('PIN incorrecto. Intenta nuevamente.', 'error')
       setTimeout(() => setPin(''), 600)
       return
     }
 
-    // PIN correcto o sin PIN configurado
+    // PIN correcto
     selectOperator(emp)
     showToast(`Bienvenido/a, ${emp.name.split(' ')[0]}`, 'success')
     setSelectedEmp(null)
