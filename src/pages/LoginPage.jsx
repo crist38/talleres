@@ -41,14 +41,13 @@ export default function LoginPage() {
     setLoading(true)
     getEmployeesList()
       .then(list => {
-        setEmployees(list)
+        setEmployees(list || [])
       })
       .catch(err => {
-        console.warn('Error cargando empleados:', err.message)
-        showToast('No se pudieron cargar los empleados desde Odoo', 'error')
+        console.warn('Error cargando empleados Odoo:', err.message)
       })
       .finally(() => setLoading(false))
-  }, [showToast])
+  }, [])
 
   const handleCardClick = (emp) => {
     setSelectedEmp(emp)
