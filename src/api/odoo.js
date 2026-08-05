@@ -83,6 +83,24 @@ export async function authenticate(db, user, password) {
   return result
 }
 
+// Asegurar autenticación del sistema (para cargar empleados en Kiosco)
+export async function ensureAuthenticated() {
+  if (_uid) return _uid
+  const result = await authenticate()
+  return result.uid
+}
+
+// Cargar la lista de empleados para la pantalla Kiosco
+export async function getEmployeesList() {
+  await ensureAuthenticated()
+  return searchRead(
+    'hr.employee',
+    [['active', '=', true]],
+    ['id', 'name', 'job_title', 'department_id', 'pin', 'user_id'],
+    { order: 'name asc', limit: 100 }
+  )
+}
+
 // ── ORM: search_read ────────────────────────────────────────
 export async function searchRead(model, domain, fields, opts = {}) {
   return rpc('/web/dataset/call_kw', {

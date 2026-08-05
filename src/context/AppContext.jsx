@@ -1,24 +1,26 @@
 // ============================================================
 // src/context/AppContext.jsx
-// Estado global: sesión Odoo, workcenter seleccionado, notificaciones
+// Estado global: sesión Odoo, operario Kiosco, auto-logout por inactividad
 // ============================================================
-import { createContext, useContext, useReducer, useCallback } from 'react'
-import { authenticate as odooAuth } from '../api/odoo'
+import { createContext, useContext, useReducer, useCallback, useEffect, useRef } from 'react'
+import { authenticate as odooAuth, ensureAuthenticated } from '../api/odoo'
 
 const AppContext = createContext(null)
 
+const INACTIVITY_TIMEOUT_MS = 3 * 60 * 1000 // 3 minutos de inactividad
+
 const initialState = {
-  // Auth
+  // Auth sistema
   isAuthenticated: false,
   uid: null,
   authError: null,
   isAuthLoading: false,
-  // Operario seleccionado
+  // Operario Kiosco seleccionado
   selectedOperator: null,
   // Workcenter seleccionado
   selectedWorkcenter: null,
   // Toast / notificación global
-  toast: null // { message, type: 'success'|'error'|'info' }
+  toast: null
 }
 
 function reducer(state, action) {
@@ -30,7 +32,7 @@ function reducer(state, action) {
     case 'AUTH_ERROR':
       return { ...state, isAuthenticated: false, isAuthLoading: false, authError: action.error }
     case 'AUTH_LOGOUT':
-      return { ...initialState }
+      return { ...initialState, isAuthenticated: state.isAuthenticated, uid: state.uid }
     case 'SET_OPERATOR':
       return { ...state, selectedOperator: action.operator }
     case 'SET_WORKCENTER':
@@ -48,6 +50,23 @@ function reducer(state, action) {
 
 export function AppProvider({ children }) {
   const [state, dispatch] = useReducer(reducer, initialState)
+  const inactivityTimerRef = useRef(null)
+
+  const showToast = useCallback((message, type = 'info') => {
+    dispatch({ type: 'SHOW_TOAST', message, toastType: type })
+    setTimeout(() => dispatch({ type: 'HIDE_TOAST' }), 4000)
+  }, [])
+
+  // ── Auto-autenticación inicial del sistema Odoo ───────────────
+  useEffect(() => {
+    dispatch({ type: 'AUTH_START' })
+    ensureAuthenticated()
+      .then(uid => dispatch({ type: 'AUTH_SUCCESS', uid }))
+      .catch(err => {
+        console.warn('Auto-auth Odoo:', err.message)
+        dispatch({ type: 'AUTH_ERROR', error: err.message })
+      })
+  }, [])
 
   const login = useCallback(async (db, user, password) => {
     dispatch({ type: 'AUTH_START' })
@@ -61,7 +80,10 @@ export function AppProvider({ children }) {
     }
   }, [])
 
-  const logout = useCallback(() => dispatch({ type: 'AUTH_LOGOUT' }), [])
+  const logout = useCallback(() => {
+    dispatch({ type: 'SET_OPERATOR', operator: null })
+    dispatch({ type: 'CLEAR_WORKCENTER' })
+  }, [])
 
   const selectOperator = useCallback((op) =>
     dispatch({ type: 'SET_OPERATOR', operator: op }), [])
@@ -72,10 +94,27 @@ export function AppProvider({ children }) {
   const clearWorkcenter = useCallback(() =>
     dispatch({ type: 'CLEAR_WORKCENTER' }), [])
 
-  const showToast = useCallback((message, type = 'info') => {
-    dispatch({ type: 'SHOW_TOAST', message, toastType: type })
-    setTimeout(() => dispatch({ type: 'HIDE_TOAST' }), 4000)
-  }, [])
+  // ── Listener de Inactividad ──────────────────────────────────
+  useEffect(() => {
+    if (!state.selectedOperator) return
+
+    const resetTimer = () => {
+      if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current)
+      inactivityTimerRef.current = setTimeout(() => {
+        logout()
+        showToast('🔒 Sesión cerrada por inactividad', 'info')
+      }, INACTIVITY_TIMEOUT_MS)
+    }
+
+    const events = ['mousemove', 'touchstart', 'keydown', 'click', 'scroll']
+    events.forEach(ev => window.addEventListener(ev, resetTimer))
+    resetTimer()
+
+    return () => {
+      if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current)
+      events.forEach(ev => window.removeEventListener(ev, resetTimer))
+    }
+  }, [state.selectedOperator, logout, showToast])
 
   return (
     <AppContext.Provider value={{

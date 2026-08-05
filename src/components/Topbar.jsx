@@ -10,7 +10,7 @@ export default function Topbar({ crumbs = [] }) {
 
   return (
     <div className="topbar">
-      <Link to="/operator" className="topbar-logo" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+      <Link to="/" className="topbar-logo" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         <img
           src="/logo.png"
           alt="Logo"
@@ -46,7 +46,7 @@ export default function Topbar({ crumbs = [] }) {
         {selectedOperator && (
           <button
             className="btn btn-ghost btn-sm"
-            onClick={() => navigate('/operator')}
+            onClick={() => { logout(); navigate('/') }}
             title="Cambiar operario"
             style={{ fontSize: '0.8rem' }}
           >

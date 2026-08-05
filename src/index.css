@@ -981,6 +981,221 @@ body {
   }
 }
 
+/* ── Kiosk Mode Employee Grid (Referencia image_19baf3.png) ──── */
+.kiosk-page {
+  padding: 32px 24px;
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+.kiosk-header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.kiosk-logo-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.kiosk-logo-img {
+  max-height: 56px;
+  object-fit: contain;
+  margin-bottom: 4px;
+}
+
+.kiosk-title {
+  font-size: 2.2rem;
+  font-weight: 900;
+  color: var(--accent);
+  letter-spacing: -0.02em;
+}
+
+.kiosk-subtitle {
+  font-size: 0.95rem;
+  color: var(--text-muted);
+}
+
+.kiosk-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.kiosk-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  background: var(--bg-card);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 20px;
+  padding: 32px 20px;
+  cursor: pointer;
+  transition: all var(--t-normal);
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+}
+
+.kiosk-card:hover,
+.kiosk-card:focus-visible {
+  border-color: var(--accent);
+  background: var(--bg-card-hover);
+  transform: translateY(-4px);
+  box-shadow: 0 8px 30px rgba(59, 130, 246, 0.25);
+  outline: none;
+}
+
+.kiosk-card:active {
+  transform: translateY(-1px);
+}
+
+.kiosk-avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  font-size: 1.6rem;
+  font-weight: 900;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.35);
+  flex-shrink: 0;
+  letter-spacing: -0.02em;
+}
+
+.modal-avatar {
+  width: 64px;
+  height: 64px;
+  font-size: 1.4rem;
+  margin-bottom: 12px;
+}
+
+.kiosk-emp-name {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #f8fafc;
+  margin-bottom: 6px;
+  letter-spacing: -0.01em;
+}
+
+.kiosk-emp-role {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #94a3b8;
+  margin-bottom: 8px;
+}
+
+.kiosk-emp-dept {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+/* ── Kiosk PIN Modal ─────────────────────────────────────────── */
+.kiosk-pin-modal {
+  max-width: 380px;
+  width: 90%;
+  padding: 32px 24px;
+  text-align: center;
+}
+
+.kiosk-pin-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.kiosk-pin-header h3 {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.kiosk-pin-prompt {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+
+.kiosk-pin-dots {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.kiosk-pin-dots.error .pin-dot {
+  border-color: var(--danger);
+  background: rgba(239, 68, 68, 0.2);
+}
+
+.pin-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  background: transparent;
+  transition: all var(--t-fast);
+}
+
+.pin-dot.filled {
+  border-color: var(--accent);
+  background: var(--accent);
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.6);
+}
+
+.kiosk-numpad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.kiosk-num-btn {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: 1.5rem;
+  font-weight: 800;
+  min-height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--t-fast);
+}
+
+.kiosk-num-btn:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--accent);
+}
+
+.kiosk-num-btn:active {
+  transform: scale(0.95);
+  background: var(--accent);
+  color: #fff;
+}
+
+.kiosk-num-btn.btn-del {
+  font-size: 1.25rem;
+  color: var(--warning);
+}
+
+.kiosk-num-btn.btn-cancel {
+  font-size: 1.1rem;
+  color: var(--text-muted);
+}
+
 /* ── Utility classes ─────────────────────────────────────────── */
 
 .flex        { display: flex; }

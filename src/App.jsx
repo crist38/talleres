@@ -12,21 +12,18 @@ import OrderList        from './pages/OrderList'
 import WorkorderDetail  from './pages/WorkorderDetail'
 
 function RequireAuth({ children }) {
-  const { isAuthenticated } = useApp()
-  return isAuthenticated ? children : <Navigate to="/" replace />
+  const { selectedOperator } = useApp()
+  return selectedOperator ? children : <Navigate to="/" replace />
 }
 
 export default function App() {
   return (
     <>
       <Routes>
-        {/* Login */}
+        {/* Kiosco de inicio y selección de operario */}
         <Route path="/" element={<LoginPage />} />
 
-        {/* Rutas protegidas */}
-        <Route path="/operator" element={
-          <RequireAuth><OperatorSelect /></RequireAuth>
-        } />
+        {/* Rutas protegidas por operario */}
         <Route path="/workcenter" element={
           <RequireAuth><WorkcenterSelect /></RequireAuth>
         } />
