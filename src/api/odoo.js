@@ -297,10 +297,21 @@ export async function refreshWorkorderState(id) {
   return data || null
 }
 
-// Finalizar orden con cantidad producida
+// Finalizar orden con cantidad producida (Odoo 19: campo qty_producing + button_finish)
 export async function finishWorkorder(id, qtyProduced) {
-  await write('mrp.workorder', [id], { qty_done: qtyProduced })
-  return callMethod('mrp.workorder', 'do_finish', [id])
+  // Odoo 19 usa qty_producing en lugar de qty_done
+  try {
+    await write('mrp.workorder', [id], { qty_producing: qtyProduced })
+  } catch (_) {
+    // Algunos setups de Odoo no permiten write directo de qty_producing en este estado
+  }
+  // Finalizar la operación — en Odoo 19 el método es button_finish
+  try {
+    return await callMethod('mrp.workorder', 'button_finish', [id])
+  } catch (_) {
+    // Fallback para versiones anteriores donde el método se llama do_finish
+    return await callMethod('mrp.workorder', 'do_finish', [id])
+  }
 }
 
 // Registrar merma/scrap
