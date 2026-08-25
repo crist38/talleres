@@ -70,7 +70,6 @@ export default function CloseModal({ workorder, onCancel, onSuccess }) {
 
       showToast(`✅ Orden cerrada — ${qty} unidades registradas`, 'success')
       onSuccess()
-      navigate('/orders')
     } catch (err) {
       showToast(`Error al cerrar la orden: ${err.message}`, 'error')
     } finally {

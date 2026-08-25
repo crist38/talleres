@@ -6,7 +6,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useApp } from '../context/AppContext'
 import { getWorkorderDetail, startWorkorder, pauseWorkorder, resumeWorkorder, refreshWorkorderState } from '../api/odoo'
-import { getWorkorderDisplayTitle, getWorkorderCode } from '../utils/formatters'
+import { getWorkorderDisplayTitle, getWorkorderCode, getPVCStep, sortPVCWorkcenters, filterWorkcentersForOperator } from '../utils/formatters'
 import Topbar from '../components/Topbar'
 import Timer from '../components/Timer'
 import CloseModal from './CloseModal'
@@ -22,7 +22,7 @@ const STATE_LABELS = {
 
 export default function WorkorderDetail() {
   const { id } = useParams()
-  const { showToast } = useApp()
+  const { showToast, selectedWorkcenter, selectedOperator, workcenters, selectWorkcenter } = useApp()
   const navigate = useNavigate()
 
   const [wo, setWo] = useState(null)
@@ -231,7 +231,26 @@ export default function WorkorderDetail() {
         <CloseModal
           workorder={wo}
           onCancel={() => setShowClose(false)}
-          onSuccess={() => setShowClose(false)}
+          onSuccess={() => {
+            setShowClose(false)
+            
+            // Auto-navegación si es parte de la secuencia PVC
+            const currentStep = getPVCStep(selectedWorkcenter)
+            if (currentStep !== null) {
+              const pvcWcs = sortPVCWorkcenters(filterWorkcentersForOperator(workcenters, selectedOperator))
+                .filter(wc => getPVCStep(wc) !== null)
+              
+              const nextWc = pvcWcs.find(wc => getPVCStep(wc) === currentStep + 1)
+              if (nextWc) {
+                selectWorkcenter(nextWc)
+                navigate('/orders')
+                return
+              }
+            }
+            
+            // Si no hay siguiente paso o no es PVC, volvemos a la lista actual
+            navigate('/orders')
+          }}
         />
       )}
     </>
