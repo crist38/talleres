@@ -29,6 +29,7 @@ export default function WorkorderDetail() {
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState(false)
   const [showClose, setShowClose] = useState(false)
+  const [nextPVCWc, setNextPVCWc] = useState(null)  // siguiente taller PVC al cerrar
 
   const isRunning = wo?.is_user_working === true
   const isPaused  = wo?.state === 'progress' && wo?.is_user_working === false
@@ -199,7 +200,25 @@ export default function WorkorderDetail() {
             <p style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--success)', marginTop: 8 }}>
               Orden completada
             </p>
-            <button className="btn btn-ghost btn-lg mt-16" onClick={() => navigate('/orders')}>
+
+            {/* Botón para ir al siguiente taller PVC (si existe) */}
+            {nextPVCWc && (
+              <button
+                className="btn btn-primary btn-lg mt-16"
+                style={{ width: '100%', fontSize: '1.1rem' }}
+                onClick={() => {
+                  selectWorkcenter(nextPVCWc)
+                  navigate('/orders')
+                }}
+              >
+                ➡️ Ir a {nextPVCWc.name}
+              </button>
+            )}
+
+            <button
+              className="btn btn-ghost btn-lg mt-16"
+              onClick={() => navigate('/orders')}
+            >
               ← Volver a la lista
             </button>
           </div>
@@ -233,37 +252,29 @@ export default function WorkorderDetail() {
           onCancel={() => setShowClose(false)}
           onSuccess={async () => {
             setShowClose(false)
-            
-            // Auto-navegación si es parte de la secuencia PVC
+            // Marcar la orden como completada localmente para mostrar la tarjeta isDone
+            setWo(prev => ({ ...prev, state: 'done', is_user_working: false }))
+
+            // Calcular el siguiente taller PVC si aplica
             const currentStep = getPVCStep(selectedWorkcenter)
             if (currentStep !== null) {
-              let wcs = workcenters
-              // Fallback si por alguna razón el estado global perdió la lista
-              if (!wcs || wcs.length === 0) {
-                 try {
-                   const { getWorkcenters } = await import('../api/odoo')
-                   wcs = await getWorkcenters() || []
-                 } catch (e) {
-                   console.error("No se pudieron cargar los centros", e)
-                 }
-              }
+              try {
+                let wcs = workcenters && workcenters.length > 0
+                  ? workcenters
+                  : (await import('../api/odoo')).getWorkcenters
+                    ? await (await import('../api/odoo')).getWorkcenters()
+                    : []
 
-              const pvcWcs = sortPVCWorkcenters(filterWorkcentersForOperator(wcs, selectedOperator))
-                .filter(wc => getPVCStep(wc) !== null)
-              
-              const nextWc = pvcWcs.find(wc => getPVCStep(wc) === currentStep + 1)
-              if (nextWc) {
-                showToast(`➡️ Pasando a: ${nextWc.name}`, 'success')
-                selectWorkcenter(nextWc)
-                navigate('/orders')
-                return
-              } else {
-                showToast(`No hay siguiente paso configurado (Workcenters disponibles: ${wcs.length})`, 'warning')
+                const pvcWcs = sortPVCWorkcenters(
+                  filterWorkcentersForOperator(wcs || [], selectedOperator)
+                ).filter(wc => getPVCStep(wc) !== null)
+
+                const nextWc = pvcWcs.find(wc => getPVCStep(wc) === currentStep + 1)
+                if (nextWc) setNextPVCWc(nextWc)
+              } catch (e) {
+                console.error('Error calculando siguiente taller PVC:', e)
               }
             }
-            
-            // Si no hay siguiente paso o no es PVC, volvemos a la lista actual
-            navigate('/orders')
           }}
         />
       )}
