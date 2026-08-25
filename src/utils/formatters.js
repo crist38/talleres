@@ -130,13 +130,22 @@ export const PVC_SEQUENCE = [
 /**
  * Devuelve el número de paso PVC (1, 2, 3) para un workcenter,
  * o null si no pertenece a la secuencia PVC.
+ *
+ * Lógica robusta por palabras clave individuales (tolerante a variaciones
+ * menores en los nombres de Odoo):
+ *   - Debe contener 'pvc'
+ *   - Contiene 'perfiles'          → Paso 1 (Corte Perfiles PVC)
+ *   - Contiene 'final'             → Paso 3 (Corte Armado Final PVC)
+ *   - Contiene 'armado'            → Paso 2 (Corte Armado PVC)
  */
 export function getPVCStep(workcenter) {
   if (!workcenter?.name) return null
-  const wcName = workcenter.name.toLowerCase()
-  for (const { step, keywords } of PVC_SEQUENCE) {
-    if (keywords.some(kw => wcName.includes(kw))) return step
-  }
+  const n = workcenter.name.toLowerCase()
+  if (!n.includes('pvc')) return null   // descarta talleres que no son PVC
+
+  if (n.includes('perfiles')) return 1  // Taller Corte Perfiles PVC
+  if (n.includes('final'))    return 3  // Taller Corte Armado Final PVC
+  if (n.includes('armado'))   return 2  // Taller Corte Armado PVC
   return null
 }
 
