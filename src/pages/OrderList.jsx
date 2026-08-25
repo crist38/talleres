@@ -2,10 +2,11 @@
 // src/pages/OrderList.jsx
 // Visualización de órdenes en modo Detalle (tarjetas) o Lista (filas)
 // ============================================================
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useApp } from '../context/AppContext'
 import { getWorkorders } from '../api/odoo'
+import { getPVCStep, sortPVCWorkcenters, filterWorkcentersForOperator } from '../utils/formatters'
 import Topbar from '../components/Topbar'
 import OrderCard from '../components/OrderCard'
 import OfflineBanner from '../components/OfflineBanner'
@@ -18,7 +19,7 @@ const FILTERS = [
 ]
 
 export default function OrderList() {
-  const { selectedWorkcenter, showToast } = useApp()
+  const { selectedWorkcenter, selectedOperator, workcenters, selectWorkcenter, showToast } = useApp()
   const navigate = useNavigate()
   const [orders, setOrders] = useState([])
   const [loading, setLoading] = useState(true)
@@ -28,6 +29,26 @@ export default function OrderList() {
   const handleSetViewMode = (mode) => {
     setViewMode(mode)
     localStorage.setItem('order_view_mode', mode)
+  }
+
+  // Talleres PVC disponibles para este operario, en orden de secuencia
+  const pvcWorkcenters = useMemo(() =>
+    sortPVCWorkcenters(filterWorkcentersForOperator(workcenters, selectedOperator))
+      .filter(wc => getPVCStep(wc) !== null),
+    [workcenters, selectedOperator]
+  )
+
+  const currentPVCStep = getPVCStep(selectedWorkcenter)
+  const prevPVCWorkcenter = currentPVCStep
+    ? pvcWorkcenters.find(wc => getPVCStep(wc) === currentPVCStep - 1) ?? null
+    : null
+  const nextPVCWorkcenter = currentPVCStep
+    ? pvcWorkcenters.find(wc => getPVCStep(wc) === currentPVCStep + 1) ?? null
+    : null
+
+  const handleGoToWorkcenter = (wc) => {
+    selectWorkcenter(wc)
+    navigate('/orders')
   }
 
   const load = useCallback(() => {
@@ -66,6 +87,79 @@ export default function OrderList() {
             🔄 Actualizar
           </button>
         </div>
+
+        {/* ── Navegación entre talleres PVC ───────────────────────── */}
+        {currentPVCStep !== null && (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 12,
+            padding: '10px 16px',
+            background: 'var(--bg-card)',
+            border: '1px solid var(--border)',
+            borderRadius: 'var(--radius-md)',
+            marginBottom: 4,
+          }}>
+            {/* Botón anterior */}
+            <button
+              id="btn-prev-taller"
+              className="btn btn-ghost btn-sm"
+              onClick={() => prevPVCWorkcenter && handleGoToWorkcenter(prevPVCWorkcenter)}
+              disabled={!prevPVCWorkcenter}
+              title={prevPVCWorkcenter ? `Ir a ${prevPVCWorkcenter.name}` : 'Este es el primer taller'}
+            >
+              ← {prevPVCWorkcenter ? prevPVCWorkcenter.name : 'Inicio'}
+            </button>
+
+            {/* Indicador de paso actual */}
+            <div style={{ textAlign: 'center', flex: 1 }}>
+              <span style={{
+                fontWeight: 700,
+                fontSize: '0.8rem',
+                color: 'var(--text-secondary)',
+                letterSpacing: '0.04em',
+                textTransform: 'uppercase',
+              }}>
+                Secuencia PVC &nbsp;·&nbsp; Paso {currentPVCStep} de {pvcWorkcenters.length}
+              </span>
+              {/* Puntos de paso clicables */}
+              <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 4 }}>
+                {pvcWorkcenters.map(wc => {
+                  const s = getPVCStep(wc)
+                  return (
+                    <button
+                      key={wc.id}
+                      onClick={() => handleGoToWorkcenter(wc)}
+                      title={wc.name}
+                      style={{
+                        width: s === currentPVCStep ? 22 : 10,
+                        height: 10,
+                        borderRadius: 9999,
+                        border: 'none',
+                        cursor: 'pointer',
+                        padding: 0,
+                        transition: 'all 0.2s',
+                        background: s === currentPVCStep ? 'var(--primary)' : 'var(--border)',
+                      }}
+                    />
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* Botón siguiente */}
+            <button
+              id="btn-next-taller"
+              className="btn btn-ghost btn-sm"
+              onClick={() => nextPVCWorkcenter && handleGoToWorkcenter(nextPVCWorkcenter)}
+              disabled={!nextPVCWorkcenter}
+              title={nextPVCWorkcenter ? `Ir a ${nextPVCWorkcenter.name}` : 'Este es el último taller'}
+            >
+              {nextPVCWorkcenter ? nextPVCWorkcenter.name : 'Fin'} →
+            </button>
+          </div>
+        )}
 
         {/* Barra de Filtros y Modo de Vista */}
         <div className="flex justify-between items-center" style={{ flexWrap: 'wrap', gap: 12 }}>

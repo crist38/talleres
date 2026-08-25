@@ -19,6 +19,8 @@ const initialState = {
   selectedOperator: null,
   // Workcenter seleccionado
   selectedWorkcenter: null,
+  // Lista completa de workcenters (para navegación entre talleres PVC)
+  workcenters: [],
   // Toast / notificación global
   toast: null
 }
@@ -35,6 +37,8 @@ function reducer(state, action) {
       return { ...initialState, isAuthenticated: state.isAuthenticated, uid: state.uid }
     case 'SET_OPERATOR':
       return { ...state, selectedOperator: action.operator }
+    case 'SET_WORKCENTERS':
+      return { ...state, workcenters: action.workcenters }
     case 'SET_WORKCENTER':
       return { ...state, selectedWorkcenter: action.workcenter }
     case 'CLEAR_WORKCENTER':
@@ -91,6 +95,9 @@ export function AppProvider({ children }) {
   const selectWorkcenter = useCallback((wc) =>
     dispatch({ type: 'SET_WORKCENTER', workcenter: wc }), [])
 
+  const setWorkcenters = useCallback((list) =>
+    dispatch({ type: 'SET_WORKCENTERS', workcenters: list }), [])
+
   const clearWorkcenter = useCallback(() =>
     dispatch({ type: 'CLEAR_WORKCENTER' }), [])
 
@@ -123,6 +130,7 @@ export function AppProvider({ children }) {
       logout,
       selectOperator,
       selectWorkcenter,
+      setWorkcenters,
       clearWorkcenter,
       showToast
     }}>

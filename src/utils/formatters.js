@@ -117,6 +117,41 @@ export function getWorkorderCode(wo) {
   return origin || moCode || ''
 }
 
+// ============================================================
+// Secuencia de producción PVC (orden fijo 1 → 2 → 3 → Finalizado)
+// Los nombres deben coincidir con los registrados en Odoo (sin distinguir mayúsculas).
+// ============================================================
+export const PVC_SEQUENCE = [
+  { step: 1, keywords: ['corte perfiles pvc', 'corte de perfiles pvc'] },
+  { step: 2, keywords: ['corte armado pvc']                             },
+  { step: 3, keywords: ['corte armado final pvc', 'armado final pvc']   },
+]
+
+/**
+ * Devuelve el número de paso PVC (1, 2, 3) para un workcenter,
+ * o null si no pertenece a la secuencia PVC.
+ */
+export function getPVCStep(workcenter) {
+  if (!workcenter?.name) return null
+  const wcName = workcenter.name.toLowerCase()
+  for (const { step, keywords } of PVC_SEQUENCE) {
+    if (keywords.some(kw => wcName.includes(kw))) return step
+  }
+  return null
+}
+
+/**
+ * Ordena una lista de workcenters PVC según la secuencia definida en PVC_SEQUENCE.
+ * Los que no pertenezcan a la secuencia van al final, en su orden original.
+ */
+export function sortPVCWorkcenters(workcenters = []) {
+  return [...workcenters].sort((a, b) => {
+    const stepA = getPVCStep(a) ?? 999
+    const stepB = getPVCStep(b) ?? 999
+    return stepA - stepB
+  })
+}
+
 /**
  * Filtra los centros de trabajo según los permisos asignados a cada operario:
  * - Daniel Pacheco: solo talleres de Termopaneles

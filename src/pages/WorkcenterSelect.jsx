@@ -5,7 +5,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useApp } from '../context/AppContext'
 import { getWorkcenters } from '../api/odoo'
-import { filterWorkcentersForOperator } from '../utils/formatters'
+import { filterWorkcentersForOperator, sortPVCWorkcenters, getPVCStep, PVC_SEQUENCE } from '../utils/formatters'
 import Topbar from '../components/Topbar'
 import OfflineBanner from '../components/OfflineBanner'
 import OdooAdminModal from '../components/OdooAdminModal'
@@ -26,9 +26,9 @@ function getIcon(name = '') {
 }
 
 export default function WorkcenterSelect() {
-  const { selectedOperator, selectWorkcenter, showToast } = useApp()
+  const { selectedOperator, selectWorkcenter, setWorkcenters, showToast } = useApp()
   const navigate = useNavigate()
-  const [workcenters, setWorkcenters] = useState([])
+  const [workcenters, setWcList] = useState([])
   const [loading, setLoading] = useState(true)
   const [showAdminModal, setShowAdminModal] = useState(false)
 
@@ -36,7 +36,9 @@ export default function WorkcenterSelect() {
     setLoading(true)
     getWorkcenters()
       .then(list => {
-        setWorkcenters(list || [])
+        const safeList = list || []
+        setWcList(safeList)
+        setWorkcenters(safeList)   // persistir en contexto global
         setShowAdminModal(false)
       })
       .catch(err => {
@@ -47,7 +49,7 @@ export default function WorkcenterSelect() {
         }
       })
       .finally(() => setLoading(false))
-  }, [showToast])
+  }, [showToast, setWorkcenters])
 
   useEffect(() => {
     loadWorkcenters()
@@ -58,7 +60,7 @@ export default function WorkcenterSelect() {
     navigate('/orders')
   }
 
-  const availableWorkcenters = filterWorkcentersForOperator(workcenters, selectedOperator)
+  const availableWorkcenters = sortPVCWorkcenters(filterWorkcentersForOperator(workcenters, selectedOperator))
 
   return (
     <>
@@ -112,19 +114,40 @@ export default function WorkcenterSelect() {
           </div>
         ) : (
           <div className="grid-4">
-            {availableWorkcenters.map(wc => (
-              <button
-                key={wc.id}
-                id={`workcenter-${wc.id}`}
-                className="card card-interactive workcenter-card"
-                onClick={() => handleSelect(wc)}
-                aria-label={`Seleccionar ${wc.name}`}
-              >
-                <div className="workcenter-icon">{getIcon(wc.name)}</div>
-                <div className="workcenter-name">{wc.name}</div>
-                {wc.code && <div className="workcenter-code">{wc.code}</div>}
-              </button>
-            ))}
+            {availableWorkcenters.map(wc => {
+              const pvcStep = getPVCStep(wc)
+              const totalPVCSteps = PVC_SEQUENCE.length
+              return (
+                <button
+                  key={wc.id}
+                  id={`workcenter-${wc.id}`}
+                  className="card card-interactive workcenter-card"
+                  onClick={() => handleSelect(wc)}
+                  aria-label={`Seleccionar ${wc.name}`}
+                >
+                  {/* Badge de paso de secuencia PVC */}
+                  {pvcStep !== null && (
+                    <div style={{
+                      position: 'absolute',
+                      top: 10,
+                      right: 12,
+                      background: 'var(--primary)',
+                      color: '#fff',
+                      borderRadius: '9999px',
+                      fontSize: '0.7rem',
+                      fontWeight: 700,
+                      padding: '2px 8px',
+                      letterSpacing: '0.03em',
+                    }}>
+                      Paso {pvcStep}/{totalPVCSteps}
+                    </div>
+                  )}
+                  <div className="workcenter-icon">{getIcon(wc.name)}</div>
+                  <div className="workcenter-name">{wc.name}</div>
+                  {wc.code && <div className="workcenter-code">{wc.code}</div>}
+                </button>
+              )
+            })}
           </div>
         )}
       </div>

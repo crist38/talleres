@@ -24,9 +24,19 @@ Aplicación Web Progresiva (PWA) de interfaz simplificada "Factory-First" diseñ
 
 1. **Login:** Inicio de sesión con Usuario y Contraseña.
 2. **Selección de Operario:** Identificación del trabajador en turno (asociado a `hr.employee` en Odoo).
-3. **Selección de Estación:** Selección de la mesa o taller (ej. *Taller Corte Vidrio*, *Taller Termopaneles*, *TALLER DE PVC*).
-4. **Lista de Órdenes:** Visualización de órdenes de trabajo asignadas a la estación con filtros por estado.
+3. **Selección de Estación:** Selección de la mesa o taller. Los talleres PVC se muestran en orden de producción con badge **"Paso N/3"**.
+4. **Lista de Órdenes:** Visualización de órdenes de trabajo asignadas a la estación con filtros por estado. En talleres PVC aparece una **barra de navegación** para saltar entre pasos sin volver al menú anterior.
 5. **Operación & Cronómetro:** Inicio/Pausa/Reanudación de tiempos y cierre con registro de mermas.
+
+### 🔄 Secuencia PVC (orden fijo de producción)
+
+| Paso | Taller | Badge |
+|------|--------|-------|
+| 1 | Taller Corte Perfiles PVC | `Paso 1/3` |
+| 2 | Taller Corte Armado PVC | `Paso 2/3` |
+| 3 | Taller Corte Armado Final PVC | `Paso 3/3` |
+
+La barra de navegación entre talleres (← Anterior · puntos de paso · Siguiente →) aparece automáticamente al estar dentro de cualquier taller de la secuencia PVC.
 
 ---
 
@@ -112,3 +122,19 @@ fabricacion/
 ## 📄 Licencia
 
 Desarrollado para **Talleres Prowindows**. Todos los derechos reservados.
+
+---
+
+## 📋 Changelog
+
+### v1.4.0 — 2026-08-25
+- **[NUEVO] Secuencia PVC ordenada:** Los talleres *Corte Perfiles PVC → Corte Armado PVC → Corte Armado Final PVC* siempre se muestran en el orden correcto de producción en la pantalla de selección de estación.
+- **[NUEVO] Badge "Paso N/3":** Cada tarjeta de taller PVC muestra su número de paso en la esquina superior derecha.
+- **[NUEVO] Barra de navegación entre talleres:** Al estar en la lista de órdenes de un taller PVC, aparece una barra con botones ← Anterior y Siguiente → para saltar directamente entre talleres sin volver al menú. Incluye puntos de paso clicables como indicadores de progreso.
+- **[INTERNO] `PVC_SEQUENCE`, `getPVCStep`, `sortPVCWorkcenters`:** Tres nuevas exportaciones en `formatters.js` que centralizan la lógica de secuencia PVC. Para cambiar el orden o agregar un paso, solo se edita `PVC_SEQUENCE`.
+- **[INTERNO] Lista de workcenters en contexto global:** `AppContext` ahora almacena la lista completa de centros de trabajo para que cualquier pantalla pueda acceder a los talleres adyacentes sin re-fetch.
+
+### v1.3.0 — anterior
+- Restricción de acceso por operario: Daniel Pacheco → Termopaneles, Williams → Corte Vidrio, Cristian Tabilo → PVC, Carlos & Cristian → Todos.
+- Modal de configuración de credenciales Odoo (`OdooAdminModal`) con prompt automático al recibir `AccessDenied`.
+- Corrección de cierre de orden en Odoo 19: uso de `qty_producing` + `button_finish`.
