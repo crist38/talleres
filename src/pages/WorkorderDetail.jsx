@@ -231,20 +231,34 @@ export default function WorkorderDetail() {
         <CloseModal
           workorder={wo}
           onCancel={() => setShowClose(false)}
-          onSuccess={() => {
+          onSuccess={async () => {
             setShowClose(false)
             
             // Auto-navegación si es parte de la secuencia PVC
             const currentStep = getPVCStep(selectedWorkcenter)
             if (currentStep !== null) {
-              const pvcWcs = sortPVCWorkcenters(filterWorkcentersForOperator(workcenters, selectedOperator))
+              let wcs = workcenters
+              // Fallback si por alguna razón el estado global perdió la lista
+              if (!wcs || wcs.length === 0) {
+                 try {
+                   const { getWorkcenters } = await import('../api/odoo')
+                   wcs = await getWorkcenters() || []
+                 } catch (e) {
+                   console.error("No se pudieron cargar los centros", e)
+                 }
+              }
+
+              const pvcWcs = sortPVCWorkcenters(filterWorkcentersForOperator(wcs, selectedOperator))
                 .filter(wc => getPVCStep(wc) !== null)
               
               const nextWc = pvcWcs.find(wc => getPVCStep(wc) === currentStep + 1)
               if (nextWc) {
+                showToast(`➡️ Pasando a: ${nextWc.name}`, 'success')
                 selectWorkcenter(nextWc)
                 navigate('/orders')
                 return
+              } else {
+                showToast(`No hay siguiente paso configurado (Workcenters disponibles: ${wcs.length})`, 'warning')
               }
             }
             
