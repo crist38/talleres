@@ -186,7 +186,7 @@ export default function WorkorderDetail() {
               id="btn-finish"
               className="btn btn-danger btn-xl"
               onClick={() => setShowClose(true)}
-              disabled={actionLoading || (!isRunning && !isPaused && canStart && !isPaused)}
+              disabled={actionLoading || (!isRunning && !isPaused)}
               style={{ minWidth: 200 }}
             >
               ✔ Finalizar

@@ -53,7 +53,7 @@ export default function CloseModal({ workorder, onCancel, onSuccess }) {
     setLoading(true)
     try {
       // 1. Finalizar la orden con qty producida
-      await finishWorkorder(workorder.id, qty)
+      const result = await finishWorkorder(workorder.id, qty)
 
       // 2. Registrar mermas (solo las que tienen qty > 0)
       const scrapTasks = scraps
@@ -68,7 +68,16 @@ export default function CloseModal({ workorder, onCancel, onSuccess }) {
         )
       await Promise.all(scrapTasks)
 
-      showToast(`✅ Orden cerrada — ${qty} unidades registradas`, 'success')
+      if (result?._productionError) {
+        showToast(
+          `⚠️ Orden cerrada, pero no se pudo liberar al siguiente taller automáticamente: ${result._productionError}. Avisa a tu supervisor para validarla en Odoo.`,
+          'error'
+        )
+      } else if (result?._productionValidated) {
+        showToast(`✅ Orden cerrada y liberada al siguiente taller — ${qty} unidades registradas`, 'success')
+      } else {
+        showToast(`✅ Orden cerrada — ${qty} unidades registradas`, 'success')
+      }
       onSuccess()
     } catch (err) {
       showToast(`Error al cerrar la orden: ${err.message}`, 'error')

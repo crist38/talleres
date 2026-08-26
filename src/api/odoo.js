@@ -305,13 +305,45 @@ export async function finishWorkorder(id, qtyProduced) {
   } catch (_) {
     // Algunos setups de Odoo no permiten write directo de qty_producing en este estado
   }
+
+  let result
   // Finalizar la operación — en Odoo 19 el método es button_finish
   try {
-    return await callMethod('mrp.workorder', 'button_finish', [id])
+    result = await callMethod('mrp.workorder', 'button_finish', [id])
   } catch (_) {
     // Fallback para versiones anteriores donde el método se llama do_finish
-    return await callMethod('mrp.workorder', 'do_finish', [id])
+    result = await callMethod('mrp.workorder', 'do_finish', [id])
   }
+
+  // Si esta era la última operación pendiente de la orden de fabricación (mrp.production),
+  // hay que VALIDAR la orden (button_mark_done) para que el semielaborado quede disponible
+  // como componente del siguiente taller de la secuencia (ej. Perfiles PVC → Armado PVC).
+  // Sin este paso, la operación queda "terminada" pero la orden nunca avanza en Odoo.
+  let productionValidated = false
+  let productionError = null
+  try {
+    const [wo] = await read('mrp.workorder', [id], ['production_id'])
+    const prodId = Array.isArray(wo?.production_id) ? wo.production_id[0] : wo?.production_id
+    if (prodId) {
+      const siblings = await searchRead(
+        'mrp.workorder',
+        [['production_id', '=', prodId]],
+        ['id', 'state']
+      )
+      const allDone = siblings.length > 0 && siblings.every(s => s.state === 'done')
+      if (allDone) {
+        await callMethod('mrp.production', 'button_mark_done', [prodId])
+        productionValidated = true
+      }
+    }
+  } catch (err) {
+    // No bloquear el cierre de la operación por esto — pero informar al llamador
+    // para que avise al operario que debe validarse manualmente en Odoo.
+    productionError = err.message
+    console.warn('No se pudo validar automáticamente la orden de fabricación:', err.message)
+  }
+
+  return { ...result, _productionValidated: productionValidated, _productionError: productionError }
 }
 
 // Registrar merma/scrap

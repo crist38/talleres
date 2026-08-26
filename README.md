@@ -127,6 +127,9 @@ Desarrollado para **Talleres Prowindows**. Todos los derechos reservados.
 
 ## 📋 Changelog
 
+### v1.4.1 — 2026-08-26
+- **[FIX] Las órdenes no avanzaban de taller en Odoo:** `finishWorkorder` solo llamaba a `button_finish` sobre el `mrp.workorder` (cerraba la operación) pero nunca validaba la orden de fabricación (`mrp.production`) padre con `button_mark_done`. Sin esa validación, el semielaborado nunca quedaba disponible como componente para la orden del siguiente taller (Corte Perfiles PVC → Corte Armado PVC → Corte Armado Final PVC), por lo que la orden se veía "finalizada" pero no avanzaba realmente en Odoo. Ahora, al cerrar la última operación pendiente de una orden, se valida automáticamente la producción. Si la validación automática falla (p. ej. requiere un backorder manual), se avisa al operario en pantalla para que la cierre desde Odoo.
+
 ### v1.4.0 — 2026-08-25
 - **[NUEVO] Secuencia PVC ordenada:** Los talleres *Corte Perfiles PVC → Corte Armado PVC → Corte Armado Final PVC* siempre se muestran en el orden correcto de producción en la pantalla de selección de estación.
 - **[NUEVO] Badge "Paso N/3":** Cada tarjeta de taller PVC muestra su número de paso en la esquina superior derecha.
