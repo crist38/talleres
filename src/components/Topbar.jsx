@@ -43,16 +43,6 @@ export default function Topbar({ crumbs = [] }) {
       </div>
 
       <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-        {selectedOperator && (
-          <button
-            className="btn btn-ghost btn-sm"
-            onClick={() => { logout(); navigate('/') }}
-            title="Cambiar operario"
-            style={{ fontSize: '0.8rem' }}
-          >
-            🔄 Cambiar
-          </button>
-        )}
         <button
           className="btn btn-ghost btn-sm"
           onClick={() => { logout(); navigate('/') }}

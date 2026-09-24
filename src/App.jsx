@@ -6,13 +6,13 @@ import { useApp } from './context/AppContext'
 import Toast from './components/Toast'
 
 import LoginPage        from './pages/LoginPage'
-import OperatorSelect   from './pages/OperatorSelect'
 import WorkcenterSelect from './pages/WorkcenterSelect'
 import OrderList        from './pages/OrderList'
 import WorkorderDetail  from './pages/WorkorderDetail'
 
 function RequireAuth({ children }) {
-  const { selectedOperator } = useApp()
+  const { selectedOperator, isRestoring } = useApp()
+  if (isRestoring) return null
   return selectedOperator ? children : <Navigate to="/" replace />
 }
 
@@ -20,10 +20,10 @@ export default function App() {
   return (
     <>
       <Routes>
-        {/* Kiosco de inicio y selección de operario */}
+        {/* Login con usuario de Odoo */}
         <Route path="/" element={<LoginPage />} />
 
-        {/* Rutas protegidas por operario */}
+        {/* Rutas protegidas: requieren sesión Odoo */}
         <Route path="/workcenter" element={
           <RequireAuth><WorkcenterSelect /></RequireAuth>
         } />

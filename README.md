@@ -19,14 +19,13 @@ Aplicación Web Progresiva (PWA) de interfaz simplificada "Factory-First" diseñ
 ## 📱 Flujo del Operario
 
 ```
-[ 🔐 Login ] ➔ [ 👷 Operario ] ➔ [ 🏭 Centro de Trabajo ] ➔ [ 📋 Lista de Órdenes ] ➔ [ ⏱ Cronómetro & Cierre ]
+[ 🔐 Login Odoo ] ➔ [ 🏭 Centro de Trabajo ] ➔ [ 📋 Lista de Órdenes ] ➔ [ ⏱ Cronómetro & Cierre ]
 ```
 
-1. **Login:** Inicio de sesión con Usuario y Contraseña.
-2. **Selección de Operario:** Identificación del trabajador en turno (asociado a `hr.employee` en Odoo).
-3. **Selección de Estación:** Selección de la mesa o taller. Los talleres PVC se muestran en orden de producción con badge **"Paso N/3"**.
-4. **Lista de Órdenes:** Visualización de órdenes de trabajo asignadas a la estación con filtros por estado. En talleres PVC aparece una **barra de navegación** para saltar entre pasos sin volver al menú anterior.
-5. **Operación & Cronómetro:** Inicio/Pausa/Reanudación de tiempos y cierre con registro de mermas.
+1. **Login:** Cada operario ingresa con **su propio usuario y contraseña de Odoo**. Todas las acciones (iniciar, pausar, cerrar órdenes) quedan registradas a su nombre en Odoo. La sesión se cierra con 🚪 Salir o tras 3 minutos de inactividad.
+2. **Selección de Estación:** Selección de la mesa o taller. Los talleres PVC se muestran en orden de producción con badge **"Paso N/3"**.
+3. **Lista de Órdenes:** Visualización de órdenes de trabajo asignadas a la estación con filtros por estado. En talleres PVC aparece una **barra de navegación** para saltar entre pasos sin volver al menú anterior.
+4. **Operación & Cronómetro:** Inicio/Pausa/Reanudación de tiempos y cierre con registro de mermas.
 
 ### 🔄 Secuencia PVC (orden fijo de producción)
 
@@ -45,20 +44,15 @@ La barra de navegación entre talleres (← Anterior · puntos de paso · Siguie
 ### Requisitos previos
 * Node.js v18+ y npm
 * Instancia de Odoo 19 con el módulo de Fabricación (`mrp`) activo.
-* Usuario de sistema en Odoo (ej. `API_Operarios`) con permisos de Fabricación.
+* Cada operario necesita un usuario en Odoo con permisos de Fabricación (el nombre del usuario define qué talleres ve, ver `filterWorkcentersForOperator` en `formatters.js`).
 
 ### Configuración del Entorno (`.env`)
 
-Crea un archivo `.env` basado en el archivo `.env.example`:
+Crea un archivo `.env` en la raíz del proyecto:
 
 ```env
 # URL base de tu Odoo (SaaS u On-Premise)
 ODOO_URL=https://prowindows-ltda.odoo.com
-
-# Credenciales de acceso
-ODOO_DB=prowindows-ltda
-ODOO_USER=api_operarios
-ODOO_PASSWORD=tu_contraseña
 
 # Puerto del servidor
 PORT=3000
@@ -66,9 +60,9 @@ PORT=3000
 # Variables para desarrollo con Vite
 VITE_ODOO_URL=https://prowindows-ltda.odoo.com
 VITE_ODOO_DB=prowindows-ltda
-VITE_ODOO_USER=api_operarios
-VITE_ODOO_PASSWORD=tu_contraseña
 ```
+
+> ⚠️ No pongas contraseñas en variables `VITE_*`: Vite las incrusta en el JavaScript que descarga el navegador.
 
 ---
 
@@ -126,6 +120,13 @@ Desarrollado para **Talleres Prowindows**. Todos los derechos reservados.
 ---
 
 ## 📋 Changelog
+
+### v1.5.0 — 2026-09-24
+- **[NUEVO] Login con usuarios de Odoo:** Cada operario ingresa con su propio usuario y contraseña de Odoo. Se eliminó el login anterior (cuadrícula de empleados + PIN `2115` + credenciales compartidas de `api_operarios`). Las acciones sobre las órdenes (iniciar, pausar, finalizar, mermas) quedan registradas en Odoo a nombre del usuario real.
+- **[NUEVO] Sesión persistente y cierre real:** Al recargar la página se recupera la sesión activa de Odoo (`/web/session/get_session_info`). 🚪 Salir y el auto-logout por inactividad (3 min) destruyen la sesión en Odoo (`/web/session/destroy`). Si la sesión expira y no puede renovarse, la app vuelve al login.
+- **[SEGURIDAD] Sin contraseñas en el frontend:** Se eliminaron `VITE_ODOO_USER` / `VITE_ODOO_PASSWORD` (Vite las incrusta en el JavaScript público) y ya no se guardan credenciales en `localStorage`; la contraseña solo vive en memoria durante la sesión.
+- **[ELIMINADO]** `OdooAdminModal` (botón ⚙️ Conexión), `OperatorSelect`, `getEmployeesList` con su lista de empleados de respaldo y el botón 🔄 Cambiar de la barra superior.
+- **[NOTA]** La restricción de talleres por operario (`filterWorkcentersForOperator`) ahora usa el nombre del **usuario** de Odoo, por lo que esos nombres deben seguir conteniendo las mismas palabras clave (Pacheco, Rivera, Tabilo, etc.).
 
 ### v1.4.1 — 2026-08-26
 - **[FIX] Las órdenes no avanzaban de taller en Odoo:** `finishWorkorder` solo llamaba a `button_finish` sobre el `mrp.workorder` (cerraba la operación) pero nunca validaba la orden de fabricación (`mrp.production`) padre con `button_mark_done`. Sin esa validación, el semielaborado nunca quedaba disponible como componente para la orden del siguiente taller (Corte Perfiles PVC → Corte Armado PVC → Corte Armado Final PVC), por lo que la orden se veía "finalizada" pero no avanzaba realmente en Odoo. Ahora, al cerrar la última operación pendiente de una orden, se valida automáticamente la producción. Si la validación automática falla (p. ej. requiere un backorder manual), se avisa al operario en pantalla para que la cierre desde Odoo.

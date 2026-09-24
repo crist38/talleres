@@ -1,21 +1,20 @@
 // ============================================================
 // src/context/AppContext.jsx
-// Estado global: sesión Odoo, operario Kiosco, auto-logout por inactividad
+// Estado global: sesión Odoo del operario, auto-logout por inactividad
 // ============================================================
 import { createContext, useContext, useReducer, useCallback, useEffect, useRef } from 'react'
-import { authenticate as odooAuth, ensureAuthenticated } from '../api/odoo'
+import { authenticate as odooAuth, getCurrentSession, logoutSession, SESSION_EXPIRED_EVENT } from '../api/odoo'
 
 const AppContext = createContext(null)
 
 const INACTIVITY_TIMEOUT_MS = 3 * 60 * 1000 // 3 minutos de inactividad
 
 const initialState = {
-  // Auth sistema
-  isAuthenticated: false,
-  uid: null,
+  // Restaurando sesión existente al cargar la app
+  isRestoring: true,
   authError: null,
   isAuthLoading: false,
-  // Operario Kiosco seleccionado
+  // Usuario de Odoo logueado: { uid, name, login }
   selectedOperator: null,
   // Workcenter seleccionado
   selectedWorkcenter: null,
@@ -30,13 +29,13 @@ function reducer(state, action) {
     case 'AUTH_START':
       return { ...state, isAuthLoading: true, authError: null }
     case 'AUTH_SUCCESS':
-      return { ...state, isAuthenticated: true, uid: action.uid, isAuthLoading: false, authError: null }
+      return { ...state, selectedOperator: action.operator, isRestoring: false, isAuthLoading: false, authError: null }
     case 'AUTH_ERROR':
-      return { ...state, isAuthenticated: false, isAuthLoading: false, authError: action.error }
+      return { ...state, selectedOperator: null, isAuthLoading: false, authError: action.error }
     case 'AUTH_LOGOUT':
-      return { ...initialState, isAuthenticated: state.isAuthenticated, uid: state.uid }
-    case 'SET_OPERATOR':
-      return { ...state, selectedOperator: action.operator }
+      return { ...initialState, isRestoring: false }
+    case 'RESTORE_DONE':
+      return { ...state, isRestoring: false }
     case 'SET_WORKCENTERS':
       return { ...state, workcenters: action.workcenters }
     case 'SET_WORKCENTER':
@@ -61,36 +60,40 @@ export function AppProvider({ children }) {
     setTimeout(() => dispatch({ type: 'HIDE_TOAST' }), 4000)
   }, [])
 
-  // ── Auto-autenticación inicial del sistema Odoo ───────────────
+  // ── Restaurar sesión Odoo existente (p. ej. tras recargar la página) ──
   useEffect(() => {
-    dispatch({ type: 'AUTH_START' })
-    ensureAuthenticated()
-      .then(uid => dispatch({ type: 'AUTH_SUCCESS', uid }))
-      .catch(err => {
-        console.warn('Auto-auth Odoo:', err.message)
-        dispatch({ type: 'AUTH_ERROR', error: err.message })
-      })
+    getCurrentSession().then(session => {
+      if (session) dispatch({ type: 'AUTH_SUCCESS', operator: session })
+      else dispatch({ type: 'RESTORE_DONE' })
+    })
   }, [])
 
-  const login = useCallback(async (db, user, password) => {
+  const login = useCallback(async (user, password) => {
     dispatch({ type: 'AUTH_START' })
     try {
-      const result = await odooAuth(db, user, password)
-      dispatch({ type: 'AUTH_SUCCESS', uid: result.uid })
-      return true
+      const operator = await odooAuth(user, password)
+      dispatch({ type: 'AUTH_SUCCESS', operator })
+      return operator
     } catch (err) {
       dispatch({ type: 'AUTH_ERROR', error: err.message })
-      return false
+      return null
     }
   }, [])
 
   const logout = useCallback(() => {
-    dispatch({ type: 'SET_OPERATOR', operator: null })
-    dispatch({ type: 'CLEAR_WORKCENTER' })
+    dispatch({ type: 'AUTH_LOGOUT' })
+    logoutSession()
   }, [])
 
-  const selectOperator = useCallback((op) =>
-    dispatch({ type: 'SET_OPERATOR', operator: op }), [])
+  // Sesión Odoo expirada sin posibilidad de renovar → volver al login
+  useEffect(() => {
+    const onExpired = () => {
+      dispatch({ type: 'AUTH_LOGOUT' })
+      showToast('🔒 La sesión de Odoo expiró. Ingresa nuevamente.', 'info')
+    }
+    window.addEventListener(SESSION_EXPIRED_EVENT, onExpired)
+    return () => window.removeEventListener(SESSION_EXPIRED_EVENT, onExpired)
+  }, [showToast])
 
   const selectWorkcenter = useCallback((wc) =>
     dispatch({ type: 'SET_WORKCENTER', workcenter: wc }), [])
@@ -128,7 +131,6 @@ export function AppProvider({ children }) {
       ...state,
       login,
       logout,
-      selectOperator,
       selectWorkcenter,
       setWorkcenters,
       clearWorkcenter,

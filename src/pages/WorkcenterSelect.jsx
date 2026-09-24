@@ -8,7 +8,6 @@ import { getWorkcenters } from '../api/odoo'
 import { filterWorkcentersForOperator, sortPVCWorkcenters, getPVCStep, PVC_SEQUENCE } from '../utils/formatters'
 import Topbar from '../components/Topbar'
 import OfflineBanner from '../components/OfflineBanner'
-import OdooAdminModal from '../components/OdooAdminModal'
 
 // Iconos por nombre de workcenter (heurística)
 function getIcon(name = '') {
@@ -30,7 +29,6 @@ export default function WorkcenterSelect() {
   const navigate = useNavigate()
   const [workcenters, setWcList] = useState([])
   const [loading, setLoading] = useState(true)
-  const [showAdminModal, setShowAdminModal] = useState(false)
 
   const loadWorkcenters = useCallback(() => {
     setLoading(true)
@@ -39,12 +37,10 @@ export default function WorkcenterSelect() {
         const safeList = list || []
         setWcList(safeList)
         setWorkcenters(safeList)   // persistir en contexto global
-        setShowAdminModal(false)
       })
       .catch(err => {
-        if (err.message?.includes('Acceso denegado') || err.message?.includes('AccessDenied') || err.message?.includes('Session expired') || err.message?.includes('expiró')) {
-          setShowAdminModal(true)
-        } else {
+        // La sesión expirada ya la maneja AppContext (vuelve al login)
+        if (!err.message?.includes('expiró')) {
           showToast(`Error cargando centros: ${err.message}`, 'error')
         }
       })
@@ -75,13 +71,6 @@ export default function WorkcenterSelect() {
             </p>
           </div>
           <div className="flex gap-8">
-            <button
-              className="btn btn-ghost btn-sm"
-              onClick={() => setShowAdminModal(true)}
-              title="Configurar conexión Odoo"
-            >
-              ⚙️ Conexión
-            </button>
             <button
               id="btn-refresh-workcenters"
               className="btn btn-ghost btn-sm"
@@ -152,16 +141,6 @@ export default function WorkcenterSelect() {
         )}
       </div>
 
-      {/* Modal de Configuración de Conexión Odoo */}
-      {showAdminModal && (
-        <OdooAdminModal
-          onConnected={() => {
-            setShowAdminModal(false)
-            loadWorkcenters()
-          }}
-          onCancel={() => setShowAdminModal(false)}
-        />
-      )}
     </>
   )
 }

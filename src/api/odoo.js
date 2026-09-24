@@ -6,14 +6,19 @@
 
 const BASE_URL = '' // vacío = mismo origen (proxy maneja /web/*)
 
-let _uid = null
-let _db = (typeof window !== 'undefined' && localStorage.getItem('odoo_db')) || import.meta.env.VITE_ODOO_DB || 'prowindows-ltda'
-let _user = (typeof window !== 'undefined' && localStorage.getItem('odoo_user')) || import.meta.env.VITE_ODOO_USER || 'api_operarios'
-let _password = (typeof window !== 'undefined' && localStorage.getItem('odoo_password')) || import.meta.env.VITE_ODOO_PASSWORD || ''
+const DB = import.meta.env.VITE_ODOO_DB || 'prowindows-ltda'
+
+// Credenciales del usuario logueado: solo en memoria (nunca en localStorage)
+// para poder re-autenticar si la sesión de Odoo expira.
+let _login = null
+let _password = null
 let _isAuthenticating = false
 
+// Se emite cuando la sesión de Odoo expira y no se puede renovar
+export const SESSION_EXPIRED_EVENT = 'odoo:session-expired'
+
 // ── Primitiva JSON-RPC ──────────────────────────────────────
-async function rpc(path, params) {
+async function rpc(path, params, { silent = false } = {}) {
   const payload = {
     jsonrpc: '2.0',
     method: 'call',
@@ -47,18 +52,21 @@ async function rpc(path, params) {
     const errName = json.error.data?.name || ''
     const errMsg  = json.error.data?.message || json.error.message || ''
 
-    // Sesión expirada → re-autenticar automáticamente
+    // Sesión expirada → re-autenticar con las credenciales en memoria, o cerrar sesión
     if (errName === 'odoo.exceptions.SessionExpiredException' || errMsg.includes('Session expired') || errMsg.includes('expiró')) {
-      if (!_isAuthenticating) {
+      if (silent) throw new Error('Sin sesión activa en Odoo')
+      if (_login && _password && !_isAuthenticating) {
         _isAuthenticating = true
         try {
-          await authenticate()
+          await authenticate(_login, _password)
           _isAuthenticating = false
           return rpc(path, params) // reintentar petición con nueva sesión
         } catch (_) {
           _isAuthenticating = false
         }
       }
+      window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT))
+      throw new Error('La sesión de Odoo expiró. Ingresa nuevamente.')
     }
 
     // Errores comunes con mensajes claros en español
@@ -80,61 +88,33 @@ async function rpc(path, params) {
 }
 
 // ── Autenticación ───────────────────────────────────────────
-export async function authenticate(db, user, password) {
-  if (db) { _db = db; _user = user; _password = password }
-  const result = await rpc('/web/session/authenticate', {
-    db: _db,
-    login: _user,
-    password: _password
-  })
-  if (!result?.uid) throw new Error('Credenciales inválidas o base de datos incorrecta')
-  _uid = result.uid
-  return result
+// Inicia sesión en Odoo con el usuario del operario. Retorna { uid, name, login }.
+export async function authenticate(login, password) {
+  const result = await rpc('/web/session/authenticate', { db: DB, login, password })
+  if (!result?.uid) throw new Error('Usuario o contraseña incorrectos')
+  _login = login
+  _password = password
+  return { uid: result.uid, name: result.name || login, login }
 }
 
-// Asegurar autenticación del sistema (para cargar empleados en Kiosco)
-export async function ensureAuthenticated() {
-  if (_uid) return _uid
-  const result = await authenticate()
-  return result.uid
-}
-
-// Lista estática de respaldo en caso de que las reglas de seguridad de Odoo impidan a api_operarios leer hr.employee
-const FALLBACK_EMPLOYEES = [
-  { id: 1, name: 'Carlos Contreras R.', job_title: 'Gerente General', department_id: [1, 'ADMINISTRATION'] },
-  { id: 2, name: 'Cristian Pereira', job_title: 'Compras', department_id: [2, 'ADMINISTRATION'] },
-  { id: 3, name: 'Cristian Tabilo', job_title: 'Jefe de Taller', department_id: [3, 'ADMINISTRATION / TALLER DE PVC'] },
-  { id: 4, name: 'Daniel Pacheco', job_title: 'Jefe de Taller Termopanel', department_id: [4, 'TALLER TERMOPANELES / TALLER TERMOPANELES'] },
-  { id: 5, name: 'William Rivera Cuevas', job_title: 'Cortador', department_id: [5, 'TALLER CORTE VIDRIO'] },
-]
-
-// Cargar la lista de empleados para la pantalla Kiosco
-export async function getEmployeesList() {
+// Sesión activa en el navegador (cookie de Odoo), p. ej. tras recargar la página.
+// Retorna { uid, name, login } o null si no hay sesión.
+export async function getCurrentSession() {
   try {
-    await ensureAuthenticated()
-    // Intentar leer solo campos seguros en Odoo (sin 'pin' que requiere grupo HR Manager)
-    const list = await searchRead(
-      'hr.employee',
-      [],
-      ['id', 'name', 'job_title', 'department_id', 'user_id'],
-      { order: 'name asc', limit: 100 }
-    )
-    if (list && list.length > 0) return list
-  } catch (err) {
-    console.warn('Lectura Odoo hr.employee restringida:', err.message)
-    try {
-      const listBasic = await searchRead(
-        'hr.employee',
-        [],
-        ['id', 'name', 'job_title'],
-        { order: 'name asc', limit: 100 }
-      )
-      if (listBasic && listBasic.length > 0) return listBasic
-    } catch (_) {}
+    const info = await rpc('/web/session/get_session_info', {}, { silent: true })
+    if (!info?.uid) return null
+    return { uid: info.uid, name: info.name || info.username, login: info.username }
+  } catch (_) {
+    return null
   }
+}
 
-  // Fallback si Odoo restringe el modelo hr.employee
-  return FALLBACK_EMPLOYEES
+export async function logoutSession() {
+  _login = null
+  _password = null
+  try {
+    await rpc('/web/session/destroy', {})
+  } catch (_) { /* si falla, la cookie expira sola */ }
 }
 
 // ── ORM: search_read ────────────────────────────────────────
@@ -199,7 +179,6 @@ export async function callMethod(model, method, ids, kwargs = {}) {
 
 // Centros de trabajo activos
 export async function getWorkcenters() {
-  await ensureAuthenticated()
   return searchRead(
     'mrp.workcenter',
     [['active', '=', true]],
