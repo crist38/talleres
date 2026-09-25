@@ -48,6 +48,10 @@ async function rpc(path, params, { silent = false, retried = false } = {}) {
     if (errName.includes('AccessDenied') || errMsg.includes('Access Denied')) {
       throw new Error('Acceso denegado. Usuario o contraseña incorrectos.')
     }
+    // Odoo responde 404 cuando el modelo no existe (módulo no instalado)
+    if (json.error.code === 404) {
+      throw new Error('Este módulo no está instalado en Odoo.')
+    }
     if (errName.includes('AccessError')) {
       throw new Error('Tu usuario de Odoo no tiene permiso para ver estos datos.')
     }

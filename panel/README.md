@@ -10,7 +10,7 @@ Panel web de **solo lectura** para revisar los datos que las apps de Prowindows 
 | Ventas | `sale.order` | fecha de la orden |
 | Fabricación | `mrp.production` | fecha de inicio |
 | Tiempos | `mrp.workorder` (con resumen por taller: esperado vs real) | fecha de inicio |
-| Mermas | `mrp.scrap` (con resumen por producto) | fecha de la merma |
+| Mermas | `stock.scrap` (con resumen por producto) | fecha de la merma |
 | Compras | `purchase.order` | fecha de la orden |
 
 Cada tabla tiene búsqueda, filtro por estado, orden por columna, totales y **Descargar CSV** (separador `;`, abre directo en Excel).

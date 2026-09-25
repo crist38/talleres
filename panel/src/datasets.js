@@ -76,7 +76,7 @@ export const DATASETS = {
   },
   mermas: {
     label: 'Mermas',
-    model: 'mrp.scrap',
+    model: 'stock.scrap',
     dateField: 'date_done',
     order: 'date_done desc',
     columns: [
