@@ -70,7 +70,7 @@ const KPIS = [
     id: 'mermas',
     tab: 'mermas',
     title: 'Mermas',
-    load: (r) => readAll('mrp.scrap',
+    load: (r) => readAll('stock.scrap',
       [['state', '=', 'done'], ...dateDomain('date_done', r.from, r.to)],
       ['scrap_qty']),
     value: rows => formatNumber(rows.length),
