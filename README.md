@@ -52,14 +52,14 @@ Crea un archivo `.env` en la raíz del proyecto:
 
 ```env
 # URL base de tu Odoo (SaaS u On-Premise)
-ODOO_URL=https://prowindows-ltda.odoo.com
+ODOO_URL=
 
 # Puerto del servidor
 PORT=3000
 
 # Variables para desarrollo con Vite
-VITE_ODOO_URL=https://prowindows-ltda.odoo.com
-VITE_ODOO_DB=prowindows-ltda
+VITE_ODOO_URL=
+VITE_ODOO_DB=
 ```
 
 > ⚠️ No pongas contraseñas en variables `VITE_*`: Vite las incrusta en el JavaScript que descarga el navegador.
